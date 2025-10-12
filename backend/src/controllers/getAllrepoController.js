@@ -97,13 +97,38 @@ async function getRepositoriesPullRequest(req, res) {
       }
     );
 
+    const prAnalytics = {
+      total: pullRequests.length,
+      open: pullRequests.filter((pr) => pr.state === "open").length,
+      closed: pullRequests.filter((pr) => pr.state === "closed").length,
+      merged: pullRequests.filter((pr) => pr.merged_at).length,
+
+      avg_time_to_merge:
+        pullRequests
+          .filter((pr) => pr.time_to_merge)
+          .reduce((sum, pr) => sum + pr.time_to_merge.hours, 0) /
+          pullRequests.filter((pr) => pr.time_to_merge).length || 0,
+
+      // Top contributors (DSA: frequency counting)
+      top_contributors: Object.entries(
+        pullRequests.reduce((acc, pr) => {
+          acc[pr.author.login] = (acc[pr.author.length] || 0) + 1;
+          return acc;
+        }, {})
+      )
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 5)
+        .map(([author, count]) => ({ author, prs: count }))
+    };
+
     res.status(200).json({
       success: true,
       repository: `${owner}/${repo}`,
-      //   analytics: prAnalytics,
-      pull_requests: pullRequests.data,
+        analytics: prAnalytics,
+      pull_requests: pullRequests,
       fetched_at: new Date().toISOString(),
     });
+    
   } catch (error) {
     console.log("Pull Request route error", error.message);
     res.status(500).json({
@@ -117,7 +142,7 @@ async function getRepositoriesPullRequest(req, res) {
   }
 }
 
-async function getRepositoryIssues(req,res) {
+async function getRepositoryIssues(req, res) {
   try {
     const { owner, repo } = req.params;
     const { state = "all", limit, days } = req.query;
@@ -130,11 +155,10 @@ async function getRepositoryIssues(req,res) {
     res.json({
       success: true,
       repository: `${owner}/${repo}`,
-    //   analytics: issueAnalytics,
-      issue:response.data,
+      //   analytics: issueAnalytics,
+      issue: response.data,
       fetched_at: new Date().toISOString(),
     });
-
   } catch (error) {
     console.log("Issue route error", error.message);
     res.status(500).json({
@@ -152,5 +176,5 @@ module.exports = {
   getUserRepositories,
   getRepositoriesCommits,
   getRepositoriesPullRequest,
-  getRepositoryIssues
+  getRepositoryIssues,
 };
