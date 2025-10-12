@@ -115,8 +115,32 @@ class GitHubServices {
         },
       });
 
-      console.log(`✅ Found ${response.length} pull requests`);
-      return response;
+      const pullRequests = response.data.map(pr =>({
+        id:pr.id,
+        number:pr.number,
+        title:pr.title,
+        state:pr.state,
+        author:{
+          login:pr.user.login,
+          avatar:pr.user.avatar_url
+        },
+        created_at:pr.created_at,
+        updated_at:pr.updated_at,
+        closed_at:pr.closed_at,
+        merged_at:pr.merged_at,
+
+        // calculate time matrics (DSA:date calculation)
+        time_to_close: pr.closed_at ? this.calculateTimeDIfference(pr.created_at,pr.closed_at):null,
+        time_to_merge:pr.merged_at? this.calculateTimeDIfference(pr.created_at,pr.merged_at):null,
+        reviewers:pr.requested_reviewers?.map(r=>r.login)||[],
+        lables:pr.lables.map(l=>l.name),
+        additions:pr.additions||0,
+        deletions:pr.deletions||0,
+        changed_files:pr.changed_files ||0
+      }))
+
+      console.log(`✅ Found ${pullRequests.length} pull requests`);
+      return pullRequests;
     } catch (error) {
       console.error(
         "❌ Commit fetch error:",
@@ -154,6 +178,20 @@ class GitHubServices {
     const date = new Date();
     date.setDate(date.getDate() - days);
     return date.toISOString();
+  }
+
+  calculateTimeDIfference(startDate,endDate){
+    const start = new Date(startDate),
+    const end = new Date(endDate);
+    const diffMs = end-start;
+    const diffHours = Math.floor(diffMs/(1000*60*60));
+    const diffDays = Math.floor(diffHours/24);
+
+    return {
+      hours:diffHours,
+      days:diffDays,
+      formatted: diffDays > 0?`${diffDays}d ${diffHours%24}h`:`${diffHours}h`
+    }
   }
 
   checkRateLimit() {

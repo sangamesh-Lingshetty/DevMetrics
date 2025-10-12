@@ -1,1 +1,10 @@
 https://claude.ai/share/2bc4ad31-e190-4302-98a0-64484d93d3b5
+
+
+updated chat history
+https://claude.ai/chat/c25faab5-5897-4a17-9996-fb56ffeb554d
+
+
+refer this below commits
+next week i have to start from the 
+ TIME BLOCK 2 (30 mins): Issues API
