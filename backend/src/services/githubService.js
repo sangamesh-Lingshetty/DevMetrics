@@ -115,29 +115,33 @@ class GitHubServices {
         },
       });
 
-      const pullRequests = response.data.map(pr =>({
-        id:pr.id,
-        number:pr.number,
-        title:pr.title,
-        state:pr.state,
-        author:{
-          login:pr.user.login,
-          avatar:pr.user.avatar_url
+      const pullRequests = response.data.map((pr) => ({
+        id: pr.id,
+        number: pr.number,
+        title: pr.title,
+        state: pr.state,
+        author: {
+          login: pr.user.login,
+          avatar: pr.user.avatar_url,
         },
-        created_at:pr.created_at,
-        updated_at:pr.updated_at,
-        closed_at:pr.closed_at,
-        merged_at:pr.merged_at,
+        created_at: pr.created_at,
+        updated_at: pr.updated_at,
+        closed_at: pr.closed_at,
+        merged_at: pr.merged_at,
 
         // calculate time matrics (DSA:date calculation)
-        time_to_close: pr.closed_at ? this.calculateTimeDIfference(pr.created_at,pr.closed_at):null,
-        time_to_merge:pr.merged_at? this.calculateTimeDIfference(pr.created_at,pr.merged_at):null,
-        reviewers:pr.requested_reviewers?.map(r=>r.login)||[],
-        lables:pr.lables.map(l=>l.name),
-        additions:pr.additions||0,
-        deletions:pr.deletions||0,
-        changed_files:pr.changed_files ||0
-      }))
+        time_to_close: pr.closed_at
+          ? this.calculateTimeDIfference(pr.created_at, pr.closed_at)
+          : null,
+        time_to_merge: pr.merged_at
+          ? this.calculateTimeDIfference(pr.created_at, pr.merged_at)
+          : null,
+        reviewers: pr.requested_reviewers?.map((r) => r.login) || [],
+        lables: pr.labels.map((l) => l.name),
+        additions: pr.additions || 0,
+        deletions: pr.deletions || 0,
+        changed_files: pr.changed_files || 0,
+      }));
 
       console.log(`✅ Found ${pullRequests.length} pull requests`);
       return pullRequests;
@@ -163,8 +167,48 @@ class GitHubServices {
         },
       });
 
+      const issues = response.data
+        .filter((issue) => !issue.pull_request)
+        .map((issue) => ({
+          id: issue.id,
+          number: issue.number,
+          title: issue.title,
+          state: issue.state,
+          author: {
+            login: issue.user.login,
+            avatar: issue.user.avatar_url,
+          },
+          created_at: issue.created_at,
+          updated_at: issue.updated_at,
+          close_at: issue.closed_at,
+          //time metrics
+          time_to_close: issue.closed_at
+            ? this.calculateTimeDIfference(issue.created_at, issue.closed_at)
+            : null,
+          age: this.calculateTimeDIfference(
+            issue.created_at,
+            new Date().toISOString()
+          ),
+          labels: issue.labels.map((l) => ({
+            name: l.name,
+            color: l.color,
+          })),
+          assigness: issue.assigness?.map((a) => a.login) || [],
+          comments: issue.comments,
+          // Categorization (DSA: pattern matching)
+          is_bug: issue.labels.some((l) =>
+            l.name.toLowerCase().includes("bug")
+          ),
+          is_feature: issue.labels.some(
+            (l) =>
+              l.name.toLowerCase().includes("feature") ||
+              l.name.toLowerCase().includes("enhancement")
+          ),
+          priority: this.detectPriority(issue.labels),
+        }));
+
       console.log(`Found ${response.data.length} issues`);
-      return response;
+      return issues;
     } catch (error) {
       console.error(
         "❌ Commit fetch error:",
@@ -180,18 +224,29 @@ class GitHubServices {
     return date.toISOString();
   }
 
-  calculateTimeDIfference(startDate,endDate){
-    const start = new Date(startDate),
+  calculateTimeDIfference(startDate, endDate) {
+    const start = new Date(startDate);
     const end = new Date(endDate);
-    const diffMs = end-start;
-    const diffHours = Math.floor(diffMs/(1000*60*60));
-    const diffDays = Math.floor(diffHours/24);
+    const diffMs = end - start;
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffHours / 24);
 
     return {
-      hours:diffHours,
-      days:diffDays,
-      formatted: diffDays > 0?`${diffDays}d ${diffHours%24}h`:`${diffHours}h`
+      hours: diffHours,
+      days: diffDays,
+      formatted:
+        diffDays > 0 ? `${diffDays}d ${diffHours % 24}h` : `${diffHours}h`,
+    };
+  }
+
+  detectPriority(labels) {
+    const labelNames = labels.map((l) => l.name.toLowerCase()).join(" ");
+    if (labelNames.includes("critical") || labelNames.includes("urgent")) {
+      return "high";
+    } else if (labelNames.includes("low") || labelNames.includes("minor")) {
+      return "low";
     }
+    return "medium";
   }
 
   checkRateLimit() {
