@@ -7,4 +7,4 @@ https://claude.ai/chat/c25faab5-5897-4a17-9996-fb56ffeb554d
 
 refer this below commits
 next week i have to start from the 
- TIME BLOCK 2 (30 mins): Issues API
+TIME BLOCK 2 (30 mins): Issues API
