@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import axios from "axios";
 
-import api from "../services/api"
+import api from "../services/api";
 
 // Real API Configuration
 const API_BASE_URL =
@@ -227,7 +227,13 @@ const Dashboard = () => {
       setUsername(searchInput);
     } catch (err) {
       console.error("❌ Error:", err);
-      setError(err.message || "Failed to fetch analytics. Please try again.");
+      if (err.status === 404) {
+        setError("GitHub user not found. Please check the username.");
+      } else if (err.status === 429) {
+        setError("Rate limit exceeded. Please try again later.");
+      } else {
+        setError(err.message || "Failed to fetch analytics. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
